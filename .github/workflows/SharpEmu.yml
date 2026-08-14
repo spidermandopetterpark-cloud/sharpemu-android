@@ -1,0 +1,43 @@
+name: SharpEmu ARM64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar
+        run: dotnet restore
+
+      - name: Compilar Linux ARM64
+        run: |
+          dotnet publish \
+            -c Release \
+            -r linux-arm64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -o build/linux-arm64
+
+      - name: Compactar
+        run: |
+          tar -czf SharpEmu-linux-arm64.tar.gz \
+            -C build/linux-arm64 .
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: SharpEmu-linux-arm64
+          path: SharpEmu-linux-arm64.tar.gz
