@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar SharpEmu
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Instalar .NET 10
@@ -16,12 +16,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Instalar workload Android
+      - name: Instalar Android workload
         run: |
           dotnet workload install android
 
       - name: Criar projeto Android
         run: |
+          rm -rf AndroidApp
           mkdir -p AndroidApp
 
           cat > AndroidApp/SharpEmu.Android.csproj <<'EOF'
@@ -30,12 +31,16 @@ jobs:
             <PropertyGroup>
               <TargetFramework>net10.0-android</TargetFramework>
               <OutputType>Exe</OutputType>
+
               <RootNamespace>SharpEmu.Android</RootNamespace>
               <ApplicationId>com.sharpemu.android</ApplicationId>
               <ApplicationTitle>SharpEmu</ApplicationTitle>
+
               <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+
+              <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
               <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
-              <AndroidSupportedAbis>arm64-v8a</AndroidSupportedAbis>
+
               <AndroidPackageFormat>apk</AndroidPackageFormat>
             </PropertyGroup>
 
@@ -46,13 +51,13 @@ jobs:
           </Project>
           EOF
 
-      - name: Criar Activity
+      - name: Criar MainActivity
         run: |
           cat > AndroidApp/MainActivity.cs <<'EOF'
-          using Android.App;
-          using Android.OS;
-          using Android.Widget;
-          using Android.Views;
+          using global::Android.App;
+          using global::Android.OS;
+          using global::Android.Widget;
+          using global::Android.Views;
 
           namespace SharpEmu.Android;
 
@@ -60,7 +65,7 @@ jobs:
               Label = "SharpEmu",
               MainLauncher = true,
               Exported = true,
-              ScreenOrientation = Android.Content.PM.ScreenOrientation.Landscape
+              ScreenOrientation = global::Android.Content.PM.ScreenOrientation.Landscape
           )]
           public class MainActivity : Activity
           {
@@ -75,26 +80,24 @@ jobs:
 
                   var title = new TextView(this)
                   {
-                      Text = "SharpEmu Android ARM64",
-                      TextSize = 24
+                      Text = "SharpEmu",
+                      TextSize = 28
                   };
 
                   var status = new TextView(this)
                   {
-                      Text = "Inicializando SharpEmu..."
+                      Text = "SharpEmu ARM64 Android"
                   };
 
                   layout.AddView(title);
                   layout.AddView(status);
 
                   SetContentView(layout);
-
-                  status.Text = "SharpEmu iniciado";
               }
           }
           EOF
 
-      - name: Restaurar projeto Android
+      - name: Restaurar
         run: |
           dotnet restore AndroidApp/SharpEmu.Android.csproj
 
@@ -105,15 +108,15 @@ jobs:
             -f net10.0-android \
             -r android-arm64 \
             --self-contained true \
-            -p:AndroidSupportedAbis=arm64-v8a \
             -p:AndroidPackageFormat=apk \
             -o artifacts/apk
 
-      - name: Procurar APK
+      - name: Verificar APK
         run: |
+          echo "===== APK GERADO ====="
           find artifacts/apk -type f -name "*.apk" -print
 
-      - name: Publicar APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SharpEmu-Android-ARM64
